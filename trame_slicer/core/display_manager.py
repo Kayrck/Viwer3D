@@ -27,6 +27,7 @@ class DisplayManager:
         if not volume_node:
             return
 
+        # DESCOMENTADO: Isso aqui é essencial! Faz as imagens 2D normais aparecerem nas janelas!
         self.show_volume_in_slice_background(volume_node, view_group)
         self.show_volume_in_slice_foreground(None, view_group)
 
@@ -39,7 +40,9 @@ class DisplayManager:
         if vr_preset:
             self._vr.apply_preset(vr_display, vr_preset)
 
-        vr_display.SetVisibility(True)
+        # ALTERADO: Desliga especificamente a imagem renderizada no visualizador 3D
+        vr_display.SetVisibility(False)
+        
         self.set_node_visible_in_group(volume_node, view_group)
 
         if do_reset_views:

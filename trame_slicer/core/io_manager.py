@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import slicer
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
@@ -20,10 +21,12 @@ from slicer import (
 from .segmentation_editor import SegmentationEditor
 from .volumes_reader import VolumesReader
 
+# Agora o print vem DEPOIS dos imports
+print("\n" + "="*50 + "\n>>> EXECUTANDO O CODIGO CORRIGIDO (IO_MANAGER) <<<\n" + "="*50 + "\n")
 
 class IOManager:
     """
-    Class responsible for loading files in the scene.
+    Classe responsável por carregar ficheiros na cena de forma inteligente.
     """
 
     def __init__(
@@ -34,8 +37,6 @@ class IOManager:
     ):
         self.scene = scene
         self.app_logic = app_logic
-
-        # Configure IO logic to enable loading from MRB format
         self.cache_dir = TemporaryDirectory()
 
         self.remote_io = vtkMRMLRemoteIOLogic()
@@ -55,121 +56,109 @@ class IOManager:
         self,
         volume_files: str | list[str],
     ) -> list[vtkMRMLVolumeNode]:
-        return VolumesReader.load_volumes(self.scene, self.app_logic, volume_files)
-
-    @classmethod
-    def write_volume(cls, volume_node, volume_file: str | Path) -> None:
-        cls.write_node(
-            volume_node,
-            volume_file,
-            vtkMRMLVolumeArchetypeStorageNode,
-            False,
-        )
-
-    def load_model(
-        self,
-        model_file: str | Path,
-        do_convert_to_slicer_coord: bool = True,
-    ) -> vtkMRMLModelNode | None:
-        model_file = Path(model_file).resolve()
-        if not model_file.is_file():
-            return None
-
-        storage_node = vtkMRMLModelStorageNode()
-        storage_node.SetFileName(model_file.as_posix())
-        model_name = model_file.stem
-        model_node: vtkMRMLModelNode = self.scene.AddNewNodeByClass("vtkMRMLModelNode", model_name)
-        storage_node.ReadData(model_node)
-
-        # Check if RAS / LPS conversion is required
-        # Slicer will read coordinates in the file header during load regarding of preferred load format
-        # Check if coordinate change occurred to rollback change if requested
-        did_convert_coord = storage_node.GetCoordinateSystem() != vtkMRMLStorageNode.CoordinateSystemRAS
-        if not do_convert_to_slicer_coord and did_convert_coord:
-            storage_node.ConvertBetweenRASAndLPS(model_node.GetPolyData(), model_node.GetPolyData())
-
-        model_node.CreateDefaultDisplayNodes()
-        return model_node
-
-    @classmethod
-    def write_model(
-        cls,
-        model_node,
-        model_file: str | Path,
-        do_convert_from_slicer_coord: bool = True,
-    ) -> None:
-        cls.write_node(
-            model_node,
-            model_file,
-            vtkMRMLModelStorageNode,
-            do_convert_from_slicer_coord,
-        )
+        """
+        FIX: Redireciona ficheiros .seg.nrrd para evitar o erro de '2 components'.
+        """
+        if isinstance(volume_files, str):
+            volume_files = [volume_files]
+            
+        actual_volumes = []
+        for f in volume_files:
+            if str(f).lower().endswith(".seg.nrrd"):
+                print(f">>> IO_MANAGER: Desviando segmentação: {f}")
+                self.load_segmentation(f)
+            else:
+                actual_volumes.append(f)
+        
+        if not actual_volumes:
+            return []
+            
+        return VolumesReader.load_volumes(self.scene, self.app_logic, actual_volumes)
 
     def load_segmentation(
         self, segmentation_file: str | Path, do_convert_to_slicer_coord=True
     ) -> vtkMRMLSegmentationNode | None:
-        if Path(segmentation_file).suffix in [".obj", ".stl", ".ply"]:
+        """
+        Carrega a segmentação e força a ativação da malha 3D.
+        """
+        seg_file_path = Path(segmentation_file)
+        
+        if seg_file_path.suffix in [".obj", ".stl", ".ply"]:
             model = self.load_model(segmentation_file, do_convert_to_slicer_coord)
             try:
-                return self.segmentation_editor.create_segmentation_node_from_model_node(model)
+                node = self.segmentation_editor.create_segmentation_node_from_model_node(model)
             finally:
                 self.scene.RemoveNode(model)
+        else:
+            node = self.segmentation_editor.load_segmentation_from_file(segmentation_file)
 
-        return self.segmentation_editor.load_segmentation_from_file(segmentation_file)
+        # ATIVAÇÃO FORÇADA DA VISTA 3D:
+        if node:
+            print(">>> IO_MANAGER: Ativando malha 3D (Closed Surface)...")
+            node.CreateClosedSurfaceRepresentation()
+            node.CreateDefaultDisplayNodes()
+            disp = node.GetDisplayNode()
+            if disp:
+                disp.SetAllSegmentsVisibility(True)
+        
+        return node
+
+    @classmethod
+    def write_volume(cls, volume_node, volume_file: str | Path) -> None:
+        cls.write_node(volume_node, volume_file, vtkMRMLVolumeArchetypeStorageNode, False)
+
+    def load_model(self, model_file: str | Path, do_convert_to_slicer_coord: bool = True) -> vtkMRMLModelNode | None:
+        model_file = Path(model_file).resolve()
+        if not model_file.is_file(): return None
+        storage_node = vtkMRMLModelStorageNode()
+        storage_node.SetFileName(model_file.as_posix())
+        model_node: vtkMRMLModelNode = self.scene.AddNewNodeByClass("vtkMRMLModelNode", model_file.stem)
+        storage_node.ReadData(model_node)
+        did_convert_coord = storage_node.GetCoordinateSystem() != vtkMRMLStorageNode.CoordinateSystemRAS
+        if not do_convert_to_slicer_coord and did_convert_coord:
+            storage_node.ConvertBetweenRASAndLPS(model_node.GetPolyData(), model_node.GetPolyData())
+        model_node.CreateDefaultDisplayNodes()
+        return model_node
+
+    @classmethod
+    def write_model(cls, model_node, model_file: str | Path, do_convert_from_slicer_coord: bool = True) -> None:
+        cls.write_node(model_node, model_file, vtkMRMLModelStorageNode, do_convert_from_slicer_coord)
 
     def write_segmentation(self, segmentation_node, segmentation_file: str | Path):
         self.segmentation_editor.export_segmentation_to_file(segmentation_node, segmentation_file)
 
     @classmethod
-    def write_node(
-        cls,
-        node,
-        node_file,
-        storage_type: type,
-        do_convert_from_slicer_coord: bool,
-    ) -> None:
-        if not node:
-            return
-
+    def write_node(cls, node, node_file, storage_type: type, do_convert_from_slicer_coord: bool) -> None:
+        if not node: return
         node_file = Path(node_file).resolve().as_posix()
         storage_node = storage_type()
-
         if hasattr(storage_node, "SetCoordinateSystem"):
             storage_node.SetCoordinateSystem(
-                vtkMRMLStorageNode.CoordinateSystemLPS
-                if do_convert_from_slicer_coord
-                else vtkMRMLStorageNode.CoordinateSystemRAS
+                vtkMRMLStorageNode.CoordinateSystemLPS if do_convert_from_slicer_coord else vtkMRMLStorageNode.CoordinateSystemRAS
             )
         storage_node.SetFileName(node_file)
         storage_node.WriteData(node)
 
     def load_scene(self, scene_path) -> bool:
         scene_path = Path(scene_path)
-        if not scene_path.is_file():
-            return False
-
-        if scene_path.name.endswith("mrb"):
-            return self._load_mrb_scene(scene_path)
+        if not scene_path.is_file(): return False
+        if scene_path.name.endswith("mrb"): return self._load_mrb_scene(scene_path)
         return self._load_mrml_scene(scene_path)
 
     def write_scene(self, scene_path: str | Path) -> bool:
         return self.save_scene(scene_path)
 
     def save_scene(self, scene_path: str | Path) -> bool:
-        scene_path = Path(scene_path)
-        scene_path = scene_path.resolve()
+        scene_path = Path(scene_path).resolve()
         base_dir = scene_path.parent
         base_dir.mkdir(parents=True, exist_ok=True)
         self.scene.SetURL(scene_path.as_posix())
         self.scene.SetRootDirectory(base_dir.as_posix())
-
-        if scene_path.name.endswith(".mrml"):
-            return self.scene.Commit()
+        if scene_path.name.endswith(".mrml"): return self.scene.Commit()
         return self.scene.WriteToMRB(scene_path.as_posix())
 
     def _load_mrml_scene(self, scene_path: Path) -> bool:
-        if not scene_path.is_file():
-            return False
+        if not scene_path.is_file(): return False
         self.scene.SetURL(scene_path.as_posix())
         return self.scene.Import(None)
 
@@ -178,5 +167,4 @@ class IOManager:
             with TemporaryDirectory() as tmpdir, ZipFile(scene_path, "r") as zip_file:
                 zip_file.extractall(tmpdir)
                 return self._load_mrml_scene(next(Path(tmpdir).rglob("*.mrml")))
-        except StopIteration:
-            return False
+        except StopIteration: return False
