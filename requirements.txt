@@ -1,0 +1,9 @@
+trame
+trame-vuetify
+trame-vtk
+py-undo-stack
+pydicom
+trame-rca
+webcolors
+PyTurboJPEG
+lxml
