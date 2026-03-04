@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH="."
 
 # 8. Expomos a porta da aplicação
-EXPOSE 8080
+EXPOSE 7860
 
 # 9. Comando para iniciar o programa
-CMD ["python", "examples/medical_viewer_app.py", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python", "examples/medical_viewer_app.py", "--host", "0.0.0.0", "--port", "7860"]
