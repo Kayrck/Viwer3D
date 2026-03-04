@@ -1,4 +1,4 @@
-﻿$readmeContent = @"
+﻿$content = @"
 ---
 title: Viwer3D
 emoji: 🏗️
@@ -13,4 +13,4 @@ pinned: false
 Visualizador médico 3D utilizando Trame e VTK.
 "@
 
-[System.IO.File]::WriteAllText("$(Get-Location)\README.md", $readmeContent, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText("$(Get-Location)\README.md", $content, (New-Object System.Text.UTF8Encoding($false)))
