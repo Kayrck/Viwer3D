@@ -3,9 +3,9 @@ version: '3.8'
 services:
   app-viewer3d:
     build: .
-    # Sincroniza a porta 8080 do seu PC com a 8080 do contêiner
+    # Sincroniza a porta 7860 do seu PC com a 7860 do contêiner
     ports:
-      - "8080:8080"
+      - "7860:7860"
     # Sincroniza seus arquivos locais com o contêiner em tempo real.
     # Assim, se você mudar um código no VSCode, não precisa remontar o Docker!
     volumes:
