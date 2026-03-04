@@ -1,4 +1,3 @@
-﻿$content = @"
 ---
 title: Viwer3D
 emoji: 🏗️
@@ -11,6 +10,3 @@ pinned: false
 
 # Viwer3D
 Visualizador médico 3D utilizando Trame e VTK.
-"@
-
-[System.IO.File]::WriteAllText("$(Get-Location)\README.md", $content, (New-Object System.Text.UTF8Encoding($false)))
