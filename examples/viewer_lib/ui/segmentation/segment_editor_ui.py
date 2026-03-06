@@ -73,7 +73,7 @@ class SegmentEditorUI(FlexContainer):
                 classes="ma-4",
                 click=self.add_segment_clicked,
                 prepend_icon="mdi-plus",
-                text="Add segment",
+                text="Adicionar segmento",
                 variant="tonal",
                 style="align-self: center;",
             )
@@ -85,7 +85,7 @@ class SegmentEditorUI(FlexContainer):
 
                     with (
                         VCardActions(classes="justify-center", style="height: 64px;"),
-                        VTooltip(text="Add Segment"),
+                        VTooltip(text="Adicionar Segmento", open_delay=2000, transition="fade-transition"),
                         Template(v_slot_activator="{ props }"),
                     ):
                         VBtn(
@@ -115,37 +115,37 @@ class SegmentEditorUI(FlexContainer):
 
     def build_effect_buttons(self, all: bool = True, **kwargs):
         self._create_effect_button(
-            "No tool",
+            "Sem ferramenta",
             "mdi-cursor-default",
             SegmentationEffectNoTool,
             **kwargs,
         )
         self._create_effect_button(
-            "Paint",
+            "Pincel",
             "mdi-brush",
             SegmentationEffectPaint,
             **kwargs,
         )
         self._create_effect_button(
-            "Erase",
+            "Borracha",
             "mdi-eraser",
             SegmentationEffectErase,
             **kwargs,
         )
         self._create_effect_button(
-            "Scissors",
+            "Tesoura",
             "mdi-content-cut",
             SegmentationEffectScissors,
             **kwargs,
         )
         if all:
             self._create_effect_button(
-                "Threshold",
+                "Limiar",
                 "mdi-auto-fix",
                 SegmentationEffectThreshold,
             )
             self._create_effect_button(
-                "Islands",
+                "Ilhas",
                 "mdi-scatter-plot",
                 SegmentationEffectIslands,
                 **kwargs,
@@ -153,13 +153,13 @@ class SegmentEditorUI(FlexContainer):
 
     def build_undo_redo_buttons(self):
         ControlButton(
-            name="Undo",
+            name="Desfazer",
             icon="mdi-undo",
             click=self.undo_clicked,
             disabled=(f"!{self._typed_state.name.can_undo}",),
         )
         ControlButton(
-            name="Redo",
+            name="Refazer",
             icon="mdi-redo",
             click=self.redo_clicked,
             disabled=(f"!{self._typed_state.name.can_redo}",),

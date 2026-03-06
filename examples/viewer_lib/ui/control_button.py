@@ -33,7 +33,8 @@ class ControlButton(VBtn):
             VIcon(icon, size=icon_size)
             with VTooltip(
                 activator="parent",
-                transition="slide-x-transition",
+                transition="fade-transition",
                 location="right",
+                open_delay=2000,
             ):
                 Span(f"{name}")

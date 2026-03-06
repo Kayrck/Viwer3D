@@ -58,8 +58,9 @@ class LoadVolumeButton(FlexContainer):
                 v_model=(typed_state.name.button_tooltip,),
                 text=name,
                 activator="parent",
-                transition="slide-y-transition",
+                transition="fade-transition",
                 location="bottom start",
+                open_delay=2000,
             )
             VFileInput(
                 v_if=(f"!{typed_state.name.loading_busy}",),
