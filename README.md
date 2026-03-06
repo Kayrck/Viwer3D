@@ -10,26 +10,6 @@ O projeto funciona como um intermediário entre poderosas bibliotecas de computa
 
 ---
 
-# 🌐 Deploy Online
-
-Uma instância pública do Viwer3D está disponível para demonstração e testes diretamente no navegador.
-
-Acesse o deploy:
-
-🔗 https://huggingface.co/spaces/Kayrck/viewer3D
-
-Esta versão está hospedada no Hugging Face Spaces, utilizando infraestrutura otimizada para aplicações Python interativas. O ambiente permite visualizar o funcionamento do motor Viwer3D sem necessidade de instalação local.
-
-Principais benefícios do deploy:
-
-Demonstração rápida da plataforma
-
-Ambiente acessível para testes e validação
-
-Distribuição simplificada para apresentações técnicas
-
-Integração com containers e pipelines de deploy
-
 # ✨ Principais Funcionalidades
 
 ### Visualização Multimodal
@@ -138,6 +118,27 @@ Rodar o container
 ```bash
 docker-compose up
 ```
+
+# 🌐 Deploy Online
+
+Uma instância pública do Viwer3D está disponível para demonstração e testes diretamente no navegador.
+
+Acesse o deploy:
+
+🔗 https://huggingface.co/spaces/Kayrck/viewer3D
+
+Esta versão está hospedada no Hugging Face Spaces, utilizando infraestrutura otimizada para aplicações Python interativas. O ambiente permite visualizar o funcionamento do motor Viwer3D sem necessidade de instalação local.
+
+Principais benefícios do deploy:
+
+Demonstração rápida da plataforma
+
+Ambiente acessível para testes e validação
+
+Distribuição simplificada para apresentações técnicas
+
+Integração com containers e pipelines de deploy
+
 # 🎨 Identidade Visual (Cirurgic3D)
 
 Este projeto foi projetado para ser facilmente customizável. As cores e logotipos podem ser ajustados nos componentes de UI em:
