@@ -38,7 +38,7 @@ class VolumePropertyUI(VCard):
         self._typed_state = TypedState(self.state, VolumePropertyState)
 
         with self, VCardText(), FlexContainer():
-            Text("3D Preset", subtitle=True)
+            Text("Predefinição 3D", subtitle=True)
             with VSelect(
                 items=(self._typed_state.name.presets_3d,),
                 v_model=(self._typed_state.name.preset_3d_name,),
@@ -54,7 +54,7 @@ class VolumePropertyUI(VCard):
                     VImg(src=("item.props.data",), height=32, width=32)
                     Span("{{item.title}}", classes="pl-2")
 
-            Text("2D Preset", subtitle=True)
+            Text("Predefinição 2D", subtitle=True)
             with VSelect(
                 items=(self._typed_state.name.presets_2d,),
                 v_model=(self._typed_state.name.preset_2d_name,),
@@ -70,25 +70,25 @@ class VolumePropertyUI(VCard):
                     VImg(src=("item.props.data",), height=32, width=32)
                     Span("{{item.title}}", classes="pl-2")
 
-            Text("Window / level", subtitle=True)
+            Text("Janela / Nível", subtitle=True)
             with (
                 RangeSlider(typed_state=self._typed_state.get_sub_state(self._typed_state.name.window_level_slider)),
                 Template(v_slot_append=True),
             ):
                 ControlButton(
-                    name="Auto Window/Level",
+                    name="Auto Janela/Nível",
                     icon="mdi-refresh-auto",
                     click=self.auto_window_level_clicked,
                 )
 
-            Text("Volume Rendering Shift", subtitle=True)
+            Text("Deslocamento de Renderização de Volume", subtitle=True)
             with (
                 Slider(typed_state=self._typed_state.get_sub_state(self._typed_state.name.vr_shift_slider)),
                 Template(v_slot_append=True),
             ):
                 ControlButton(
                     icon="mdi-crop",
-                    name="Crop volume rendering",
+                    name="Recortar renderização de volume",
                     active=(self._typed_state.name.volume_crop_active,),
                     click=self.vr_crop_button_clicked,
                     **kwargs,

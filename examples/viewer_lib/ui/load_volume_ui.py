@@ -29,15 +29,15 @@ class LoadVolumeUI(FlexContainer):
         typed_state = TypedState(self.state, LoadVolumeState)
 
         with self:
-            client.Style(".v-input__prepend .v-icon { opacity: 1.0; }")  # Overwrite vuetify's opacity
+            client.Style(".v-input__prepend .v-icon { opacity: 1.0; }")
             self.load_volume_files_button = LoadVolumeButton(
-                name="Open Files",
+                name="Abrir Arquivos",
                 load_directory=False,
                 icon="mdi-file-upload",
                 typed_state=typed_state.get_sub_state(typed_state.name.file_button),
             )
             self.load_volume_dir_button = LoadVolumeButton(
-                name="Open Directory",
+                name="Abrir Diretório",
                 load_directory=True,
                 icon="mdi-folder-upload",
                 typed_state=typed_state.get_sub_state(typed_state.name.dir_button),

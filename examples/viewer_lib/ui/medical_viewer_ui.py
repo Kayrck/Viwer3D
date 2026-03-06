@@ -33,14 +33,14 @@ class MedicalViewerUI:
             with self.layout.toolbar, FlexContainer(fill_height=True):
                 self._create_tool_button(
                     icon="mdi-tune-variant",
-                    name="Volume Properties",
+                    name="Propriedades do Volume",
                     tool_ui_type=VolumePropertyUI,
                 )
                 self.layout_button = LayoutButton()
                 self.markups_button = MarkupsButton()
                 self._create_tool_button(
                     icon="mdi-brush",
-                    name="segmentation panel",
+                    name="Painel de Segmentação",
                     tool_ui_type=SegmentEditorUI,
                 )
                 self.slab_button = SlabButton()
@@ -84,7 +84,7 @@ class MedicalViewerUI:
 
         ControlButton(
             icon=icon,
-            name="{{ " + f"{self._is_tool_drawer_visible(tool_ui_type)} ? 'Close {name}' : 'Open {name}'" + " }}",
+            name="{{ " + f"{self._is_tool_drawer_visible(tool_ui_type)} ? 'Fechar {name}' : 'Abrir {name}'" + " }}",
             click=change_drawer_ui,
             active=(self._is_tool_active(tool_ui_type),),
         )
