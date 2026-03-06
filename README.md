@@ -88,34 +88,42 @@ Clone o repositório:
 ```bash
 git clone https://github.com/[seu-usuario]/viwer3d.git
 cd viwer3d
-
+```
 Instale as dependências:
+```bash
 pip install -r requirements.txt
-
+```
 (Opcional) Se estiver utilizando o wheel específico para Slicer/VTK incluído:
+```bash
 pip install vtk_mrml-9.4.0-cp310-cp310-manylinux_2_35_x86_64.whl
-
-🖥️ Como Executar
+```
+# 🖥️ Como Executar
 
 Para iniciar o visualizador médico padrão:
+```bash
 python examples/medical_viewer_app.py
-
+```
 Acesse no navegador:
 http://localhost:8080
 
-🐳 Docker e Deploy
+# 🐳 Docker e Deploy
 
 O projeto está pronto para ser containerizado e implantado em serviços como Hugging Face Spaces.
 
 Construir a imagem
+```bash
 docker-compose build
+```
 Rodar o container
+```bash
 docker-compose up
-🎨 Identidade Visual (Cirurgic3D)
+```
+# 🎨 Identidade Visual (Cirurgic3D)
 
 Este projeto foi projetado para ser facilmente customizável. As cores e logotipos podem ser ajustados nos componentes de UI em:
-
+```bash
 examples/viewer_lib/ui
+```
 
 Isso permite aderência total à paleta visual da Cirurgic3D.
 
