@@ -22,7 +22,7 @@ class MedicalViewerUI:
     def __init__(self, server: Server, layout_manager: LayoutManager):
         self.tool_registry = {}
         with ViewerLayout(server) as self.layout:
-            self.layout.title.set_text("Medical Viewer")
+            self.layout.title.set_text("Cirurgic3D")
             with self.layout.appbar, Template(v_slot_prepend=True):
                 self.load_volume_items_buttons = LoadVolumeUI()
 

@@ -31,7 +31,7 @@ class ViewerLayout(VAppLayout):
         self,
         server: Server,
         template_name="main",
-        title: str = "Trame Slicer",
+        title: str = "Cirurgic3D", 
         theme: str = "dark",
         is_drawer_visible: bool = False,
     ):
@@ -41,40 +41,37 @@ class ViewerLayout(VAppLayout):
         self.root.theme = theme
 
         with self:
-            with VAppBar() as self.appbar:
-                self.title = VToolbarTitle(title)
+            with VAppBar(color="#192E41", elevation=2) as self.appbar:
+                self.title = VToolbarTitle(title, classes="font-weight-bold")
 
-            with VFooter(app=True, classes="my-0 py-0", border=True) as self.footer:
+            with VFooter(app=True, classes="my-0 py-0", border=True, color="#000000") as self.footer:
                 VProgressCircular(
                     indeterminate=("!!trame__busy",),
-                    color="#04a94d",
+                    color="#7FF9C6", 
                     size=16,
                     width=3,
                     classes="ml-n3 mr-1",
                 )
                 self.footer.add_child(
-                    '<a href="https://kitware.github.io/trame/" '
-                    'class="text-grey-lighten-1 text-caption text-decoration-none" '
-                    'target="_blank">Powered by trame</a>'
+                    '<span class="text-grey-lighten-1 text-caption">Desenvolvido por Cirurgic3D</span>'
                 )
                 VSpacer()
+                
                 reload = self.server.controller.on_server_reload
                 if reload.exists():
                     with VBtn(
                         size="x-small",
                         density="compact",
                         icon=True,
-                        # border=True,
                         elevation=0,
                         click=self.on_server_reload,
                         classes="mx-2",
+                        color="#126D83", 
                     ):
-                        VIcon("mdi-autorenew", size="small")
+                        VIcon("mdi-autorenew", size="small", color="#7FF9C6")
 
                 self.footer.add_child(
-                    '<a href="https://www.kitware.com/" '
-                    'class="text-grey-lighten-1 text-caption text-decoration-none" '
-                    'target="_blank">© 2025 Kitware Inc.</a>'
+                    f'<span class="text-grey-lighten-1 text-caption">© 2026 Cirurgic3D</span>'
                 )
 
             with VMain():
@@ -87,6 +84,7 @@ class ViewerLayout(VAppLayout):
                 location="left",
                 v_model=(self.typed_state.name.is_drawer_visible, is_drawer_visible),
                 width=350,
+                color="#000000", 
             )
 
             with (
@@ -96,11 +94,12 @@ class ViewerLayout(VAppLayout):
                     permanent=True,
                     width=40,
                     location="left",
+                    color="#192E41",
                 ),
                 FlexContainer(fill_height=True),
             ):
                 self.toolbar = FlexContainer(classes="py-2", align="center")
-                VDivider()
+                VDivider(color="#1EB3B2") 
                 VSpacer()
-                VDivider()
+                VDivider(color="#1EB3B2")
                 self.undo_redo = FlexContainer(classes="py-2", align="center")
