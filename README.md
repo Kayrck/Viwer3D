@@ -1,100 +1,122 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>README - Viwer3D Cirurgic3D</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #24292e;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-            background-color: #ffffff;
-        }
-        h1 { border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; color: #0366d6; }
-        h2 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-top: 24px; }
-        code {
-            background-color: rgba(27, 31, 35, 0.05);
-            border-radius: 3px;
-            padding: 0.2em 0.4em;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 85%;
-        }
-        pre {
-            background-color: #f6f8fa;
-            border-radius: 3px;
-            padding: 16px;
-            overflow: auto;
-            line-height: 1.45;
-        }
-        pre code {
-            background-color: transparent;
-            padding: 0;
-            font-size: 100%;
-        }
-        ul { padding-left: 2em; }
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 1;
-            border-radius: 20px;
-            background-color: #0366d6;
-            color: white;
-            margin-bottom: 10px;
-        }
-    </style>
-</head>
-<body>
+# Viwer3D: Motor e Visualizador 3D (Cirurgic3D)
 
-    <h1>Viwer3D: Motor e Visualizador 3D</h1>
-    <div class="badge">Cirurgic3D Core</div>
+O **Viwer3D** é o motor de visualização e processamento de imagens médicas da **Cirurgic3D**. Desenvolvido em **Python** e baseado no framework **trame-slicer**, este projeto oferece uma plataforma robusta e **web-native** para visualização 3D, reconstrução multiplanar (**MPR**) e segmentação avançada de dados volumétricos.
 
-    <p>O <strong>Viwer3D</strong> é o motor de visualização e processamento de imagens médicas da Cirurgic3D. Desenvolvido em Python e baseado no framework <code>trame-slicer</code>, este projeto oferece uma plataforma robusta e <em>web-native</em> para visualização 3D, reconstrução multiplanar (MPR) e segmentação avançada de dados volumétricos.</p>
+---
 
-    <h2>🚀 Visão Geral</h2>
-    <p>O motor funciona como uma camada de interface entre bibliotecas de computação científica (VTK/Slicer) e o navegador. Ele permite que profissionais realizem reconstruções complexas e segmentações anatômicas com performance de desktop diretamente no ambiente web.</p>
+# 🚀 Visão Geral
 
-    <h2>✨ Principais Funcionalidades</h2>
-    <ul>
-        <li><strong>Visualização Multimodal:</strong> Visualização 3D e fatias 2D (Axial, Sagital e Coronal) sincronizadas.</li>
-        <li><strong>Segmentação Avançada:</strong> Ferramentas de Paint (Pintura), Erase (Borracha), Threshold (Limiarização) e remoção de ilhas.</li>
-        <li><strong>Renderização de Volume:</strong> Algoritmos otimizados para tecidos, ossos e estruturas vasculares.</li>
-        <li><strong>Gestão de Markups:</strong> Adição e manipulação de pontos de controle com precisão anatômica.</li>
-        <li><strong>Presets Médicos:</strong> Configurações de janelamento (Window/Level) para CT e MR.</li>
-    </ul>
+O projeto funciona como um intermediário entre poderosas bibliotecas de computação científica (**VTK/Slicer**) e a interface do usuário no navegador. Ele permite que profissionais visualizem exames complexos, realizem marcações e executem segmentações anatômicas com **performance de desktop em um ambiente web**.
 
-    <h2>🛠️ Tecnologias Utilizadas</h2>
-    <ul>
-        <li><a href="https://kitware.github.io/trame/">Trame</a>: Framework para aplicações visuais web em Python.</li>
-        <li><strong>VTK/Slicer</strong>: Motores de renderização e processamento.</li>
-        <li><strong>Docker</strong>: Containerização para deploy escalável (Hugging Face Spaces).</li>
-    </ul>
+---
 
-    <h2>📂 Estrutura do Repositório</h2>
-    <ul>
-        <li><code>/trame_slicer</code>: Núcleo do motor (IO, Layouts, Segmentação).</li>
-        <li><code>/examples</code>: Aplicações de referência (Medical Viewer e Segmentation App).</li>
-        <li><code>/resources</code>: Presets de visualização, ícones e dicionários DICOM.</li>
-    </ul>
+# ✨ Principais Funcionalidades
 
-    <h2>⚙️ Instalação e Execução</h2>
-    <p>Instale as dependências necessárias:</p>
-    <pre><code>pip install -r requirements.txt</code></pre>
-    
-    <p>Para iniciar o visualizador médico padrão:</p>
-    <pre><code>python examples/medical_viewer_app.py</code></pre>
+### Visualização Multimodal
+Suporte para visualização **3D** e fatias **2D (Axial, Sagital e Coronal)** simultâneas.
 
-    <h2>🐳 Docker</h2>
-    <p>Construa e execute o ambiente completo via Docker Compose:</p>
-    <pre><code>docker-compose up --build</code></pre>
+### Segmentação Avançada
+Ferramentas integradas para:
 
-    <hr>
-    <p><em>Este documento descreve a infraestrutura técnica do projeto Viwer3D da Cirurgic3D.</em></p>
+- **Paint (Pintura)**
+- **Erase (Borracha)**
+- **Threshold (Limiarização)**
+- Remoção de **"ilhas"**
 
-</body>
-</html>
+### Renderização de Volume
+Algoritmos otimizados para visualização de:
+
+- Tecidos
+- Ossos
+- Estruturas vasculares
+
+### Gestão de Markups
+Adição e manipulação de **pontos de controle e fidelidade anatômica**.
+
+### Presets Médicos
+Configurações pré-definidas de **janelamento (Window/Level)** para **CT e MR**.
+
+### Interface Flexível
+Layouts customizáveis baseados em componentes **trame**.
+
+---
+
+# 🛠️ Tecnologias Utilizadas
+
+- **Trame**  
+  Framework para criação de aplicações web visuais em Python.
+
+- **VTK/Slicer**  
+  Motores de processamento e renderização 3D.
+
+- **Vue.js (via Trame)**  
+  Construção da interface reativa.
+
+- **Docker**  
+  Garantia de portabilidade e facilidade de deploy (incluindo suporte para **Hugging Face Spaces**).
+
+---
+
+# 📂 Estrutura do Projeto
+/trame_slicer
+→ O núcleo do motor. Contém a lógica de IO, gerenciamento de visualização,
+layouts e ferramentas de segmentação.
+
+/examples
+→ Demonstrações de implementação, incluindo:
+medical_viewer_app.py
+segmentation_app.py
+
+/resources
+→ Presets de visualização, ícones e terminologias DICOM. 
+
+---
+
+# ⚙️ Instalação e Configuração
+
+## Pré-requisitos
+
+- **Python 3.10+**
+- **Pip**
+
+---
+
+## Instalação local
+
+Clone o repositório:
+
+```bash
+git clone https://github.com/[seu-usuario]/viwer3d.git
+cd viwer3d
+
+Instale as dependências:
+pip install -r requirements.txt
+
+(Opcional) Se estiver utilizando o wheel específico para Slicer/VTK incluído:
+pip install vtk_mrml-9.4.0-cp310-cp310-manylinux_2_35_x86_64.whl
+
+🖥️ Como Executar
+
+Para iniciar o visualizador médico padrão:
+python examples/medical_viewer_app.py
+
+Acesse no navegador:
+http://localhost:8080
+
+🐳 Docker e Deploy
+
+O projeto está pronto para ser containerizado e implantado em serviços como Hugging Face Spaces.
+
+Construir a imagem
+docker-compose build
+Rodar o container
+docker-compose up
+🎨 Identidade Visual (Cirurgic3D)
+
+Este projeto foi projetado para ser facilmente customizável. As cores e logotipos podem ser ajustados nos componentes de UI em:
+
+examples/viewer_lib/ui
+
+Isso permite aderência total à paleta visual da Cirurgic3D.
+
+Este README serve como guia técnico e comercial para o motor que sustenta a visualização 3D da Cirurgic3D. Para dúvidas ou contribuições, entre em contato com a equipe de desenvolvimento.
