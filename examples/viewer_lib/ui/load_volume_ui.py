@@ -1,8 +1,11 @@
+import slicer
+import slicer.util
+
 from dataclasses import dataclass, field
 
 from trame.widgets import client
 from trame_server.utils.typed_state import TypedState
-from trame_vuetify.widgets.vuetify3 import VFileInput, VProgressCircular, VTooltip
+from trame_vuetify.widgets.vuetify3 import VBtn, VFileInput, VProgressCircular, VTooltip, VSnackbar
 from undo_stack import Signal
 
 from .flex_container import FlexContainer
@@ -22,6 +25,7 @@ class LoadVolumeState:
 
 class LoadVolumeUI(FlexContainer):
     on_load_volume = Signal(list[dict], str)
+    on_save_files = Signal()
 
     def __init__(self, **kwargs):
         super().__init__(row=True, **kwargs)
@@ -42,9 +46,42 @@ class LoadVolumeUI(FlexContainer):
                 icon="mdi-folder-upload",
                 typed_state=typed_state.get_sub_state(typed_state.name.dir_button),
             )
+            self.save_files_button = SaveFilesButton(
+                name="Salvar Arquivos",
+                icon="mdi-content-save",
+            )
+            VSnackbar(
+                "Arquivos salvos com sucesso!",
+                v_model=("show_save_alert", False),
+                timeout=3000,
+                color="success",
+                location="top",
+            )
 
         self.load_volume_files_button.on_load_volume.connect(self.on_load_volume)
         self.load_volume_dir_button.on_load_volume.connect(self.on_load_volume)
+        self.save_files_button.on_save_files.connect(self.on_save_files)
+
+
+class SaveFilesButton(FlexContainer):
+    on_save_files = Signal()
+
+    def __init__(self, name: str, icon: str):
+        super().__init__(justify="center", row=True, style="width: 50px; height: 50px; align-items: center;")
+
+        with self:
+            VTooltip(
+                text=name,
+                activator="parent",
+                transition="fade-transition",
+                location="bottom start",
+                open_delay=2000,
+            )
+            VBtn(
+                icon=icon,
+                variant="text",
+                click=self.on_save_files.emit,
+            )
 
 
 class LoadVolumeButton(FlexContainer):

@@ -1,5 +1,8 @@
+import os
+from datetime import datetime
 from tempfile import TemporaryDirectory
 
+import slicer
 from slicer import vtkMRMLVolumeNode
 from trame_server import Server
 from undo_stack import Signal
@@ -19,9 +22,38 @@ class LoadVolumeLogic(BaseLogic[LoadVolumeState]):
 
     def __init__(self, server: Server, slicer_app: SlicerApp):
         super().__init__(server, slicer_app, LoadVolumeState)
+        self.state.show_save_alert = False
 
     def set_ui(self, ui: LoadVolumeUI):
         ui.on_load_volume.connect(self._on_load_volume)
+        ui.on_save_files.connect(self.save_files)
+
+    def save_files(self):
+        slicer.mrmlScene = self._slicer_app.scene
+        
+        folder_name = datetime.now().strftime("Arquivos_Salvos_%Y%m%d_%H%M%S")
+        save_path = os.path.join(os.getcwd(), folder_name)
+        os.makedirs(save_path, exist_ok=True)
+        
+        volumes = self._slicer_app.scene.GetNodesByClass("vtkMRMLScalarVolumeNode")
+        for i in range(volumes.GetNumberOfItems()):
+            node = volumes.GetItemAsObject(i)
+            base_name = node.GetName().replace(".nrrd", "")
+            file_path = os.path.join(save_path, f"{base_name}.nrrd")
+            self._slicer_app.io_manager.write_node(
+                node, file_path, slicer.vtkMRMLVolumeArchetypeStorageNode, False
+            )
+            
+        segmentations = self._slicer_app.scene.GetNodesByClass("vtkMRMLSegmentationNode")
+        for i in range(segmentations.GetNumberOfItems()):
+            node = segmentations.GetItemAsObject(i)
+            base_name = node.GetName().replace(".seg.nrrd", "").replace(".nrrd", "").replace(".seg", "")
+            file_path = os.path.join(save_path, f"{base_name}.seg.nrrd")
+            self._slicer_app.io_manager.write_node(
+                node, file_path, slicer.vtkMRMLSegmentationStorageNode, False
+            )
+            
+        self.state.show_save_alert = True
 
     def _on_load_volume(self, files: list[dict], is_loading_state_name: str) -> None:
         try:
@@ -33,10 +65,8 @@ class LoadVolumeLogic(BaseLogic[LoadVolumeState]):
         if not files:
             return
 
-        # Remove previous data
         self._slicer_app.scene.Clear()
 
-        # Load new volumes and display the first one
         with TemporaryDirectory() as tmp_dir:
             loaded_files = write_client_files_to_dir(files, tmp_dir)
             if len(loaded_files) == 1 and loaded_files[0].endswith(".mrb"):
