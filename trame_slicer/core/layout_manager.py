@@ -145,6 +145,8 @@ class LayoutManager:
 
         return {
             "Axial Only": Layout(LayoutDirection.Vertical, [axial_view]),
+            "Sagittal Only": Layout(LayoutDirection.Vertical, [sagittal_view]),
+            "Coronal Only": Layout(LayoutDirection.Vertical, [coronal_view]),
             "Axial Primary": Layout(
                 LayoutDirection.Horizontal,
                 [
