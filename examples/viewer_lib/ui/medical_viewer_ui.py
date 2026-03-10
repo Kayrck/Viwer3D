@@ -1,3 +1,4 @@
+from trame.widgets import html
 from trame.widgets.vuetify3 import Template
 from trame_server import Server
 
@@ -21,7 +22,39 @@ from .volume_property_ui import VolumePropertyUI
 class MedicalViewerUI:
     def __init__(self, server: Server, layout_manager: LayoutManager):
         self.tool_registry = {}
+        
+        server.state.loading_active = False
+        server.state.loading_status = "Inicializando..."
+        server.state.loading_progress = 0
+        server.state.loading_fade_out = False
+
         with ViewerLayout(server) as self.layout:
+            with html.Div(
+                v_if="loading_active",
+                style="""
+                    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                    background: radial-gradient(circle, #0f172a 0%, #020617 100%);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    z-index: 9999; transition: opacity 0.6s ease-out;
+                """,
+                classes=("transition-opacity", {"opacity-0": "loading_fade_out"})
+            ):
+                html.Div(
+                    "{{ loading_status }}",
+                    style="color: #94a3b8; font-family: sans-serif; font-size: 1.1rem; font-weight: 300; margin-bottom: 20px; letter-spacing: 1.5px; text-transform: uppercase;"
+                )
+
+                with html.Div(style="width: 350px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);"):
+                    html.Div(
+                        style="height: 100%; background: linear-gradient(90deg, #0ea5e9, #2dd4bf); border-radius: 10px; transition: width 0.3s ease; box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);",
+                        style_width=("loading_progress + '%'")
+                    )
+                
+                html.Div(
+                    "Processando dados médicos volumétricos",
+                    style="color: #475569; font-family: sans-serif; font-size: 0.7rem; margin-top: 15px; font-style: italic; opacity: 0.7;"
+                )
+
             self.layout.title.set_text("Cirurgic3D")
             with self.layout.appbar, Template(v_slot_prepend=True):
                 self.load_volume_items_buttons = LoadVolumeUI()

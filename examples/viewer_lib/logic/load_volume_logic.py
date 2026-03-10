@@ -1,4 +1,5 @@
 import os
+import asyncio
 from datetime import datetime
 from tempfile import TemporaryDirectory
 
@@ -55,33 +56,72 @@ class LoadVolumeLogic(BaseLogic[LoadVolumeState]):
             
         self.state.show_save_alert = True
 
-    def _on_load_volume(self, files: list[dict], is_loading_state_name: str) -> None:
+    async def _on_load_volume(self, files: list[dict], is_loading_state_name: str) -> None:
         try:
-            self._load_volume_files(files)
+            self.server.state.loading_active = True
+            self.server.state.loading_fade_out = False
+            self.server.state.loading_progress = 0
+            self.server.state.loading_status = "Iniciando importação..."
+            self.server.state.flush()
+            await asyncio.sleep(0.1)
+            
+            await self._load_volume_files(files)
+            
+            self.server.state.loading_progress = 100
+            self.server.state.loading_status = "Ambiente pronto"
+            self.server.state.loading_fade_out = True
+            self.server.state.flush()
+            
+            await asyncio.sleep(0.6)
+            self.server.state.loading_active = False
+            
         finally:
             self.state[is_loading_state_name] = False
+            self.server.state.flush()
 
-    def _load_volume_files(self, files: list[dict]) -> None:
+    async def _load_volume_files(self, files: list[dict]) -> None:
         if not files:
             return
 
         self._slicer_app.scene.Clear()
+        
+        self.server.state.loading_status = "Lendo arquivos DICOM..."
+        self.server.state.loading_progress = 20
+        self.server.state.flush()
+        await asyncio.sleep(0.1)
 
         with TemporaryDirectory() as tmp_dir:
             loaded_files = write_client_files_to_dir(files, tmp_dir)
+            
+            self.server.state.loading_status = "Indexando volume médico..."
+            self.server.state.loading_progress = 50
+            self.server.state.flush()
+            await asyncio.sleep(0.1)
+            
             if len(loaded_files) == 1 and loaded_files[0].endswith(".mrb"):
-                self._on_load_scene(loaded_files[0])
+                await self._on_load_scene(loaded_files[0])
             else:
-                self._on_load_volume_files(loaded_files)
+                await self._on_load_volume_files(loaded_files)
 
-    def _on_load_scene(self, scene_file):
+    async def _on_load_scene(self, scene_file):
         self._slicer_app.io_manager.load_scene(scene_file)
         self._show_largest_volume(list(self._slicer_app.scene.GetNodesByClass("vtkMRMLVolumeNode")))
 
-    def _on_load_volume_files(self, loaded_files):
+    async def _on_load_volume_files(self, loaded_files):
+        self.server.state.loading_status = "Reconstruindo volume 3D..."
+        self.server.state.loading_progress = 75
+        self.server.state.flush()
+        await asyncio.sleep(0.1)
+        
         volumes = self._slicer_app.io_manager.load_volumes(loaded_files)
         if not volumes:
             return
+            
+        self.server.state.loading_status = "Preparando renderização..."
+        self.server.state.loading_progress = 90
+        self.server.state.flush()
+        await asyncio.sleep(0.1)
+        
         self._show_largest_volume(volumes)
 
     def _show_largest_volume(self, volumes):

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from trame.widgets import client
 from trame_server.utils.typed_state import TypedState
-from trame_vuetify.widgets.vuetify3 import VBtn, VFileInput, VProgressCircular, VTooltip, VSnackbar
+from trame_vuetify.widgets.vuetify3 import VBtn, VFileInput, VTooltip, VSnackbar
 from undo_stack import Signal
 
 from .flex_container import FlexContainer
@@ -100,9 +100,9 @@ class LoadVolumeButton(FlexContainer):
                 open_delay=2000,
             )
             VFileInput(
-                v_if=(f"!{typed_state.name.loading_busy}",),
+                disabled=(typed_state.name.loading_busy,),
                 change=(
-                    f"{typed_state.name.loading_busy} = true; {typed_state.name.button_tooltip} = false;"
+                    f"{typed_state.name.loading_busy} = true; {typed_state.name.button_tooltip} = false; loading_active = true; "
                     "trigger('"
                     f"{self.server.controller.trigger_name(self.on_load_volume.async_emit)}"
                     f"', [$event.target.files, '{typed_state.name.loading_busy}']"
@@ -113,4 +113,3 @@ class LoadVolumeButton(FlexContainer):
                 hide_input=True,
                 raw_attrs=["webkitdirectory"] if load_directory else [],
             )
-            VProgressCircular(v_else=True, indeterminate=True, size=24)
