@@ -1,37 +1,23 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, get_args
+from typing import Literal
 
 import numpy as np
 import pydicom.multival
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
+import slicer
 from slicer import (
     vtkMRMLApplicationLogic,
     vtkMRMLScene,
-    vtkMRMLVolumeArchetypeStorageNode,
     vtkMRMLVolumeNode,
     vtkSlicerVolumesLogic,
 )
 from vtkmodules.vtkCommonCore import vtkStringArray
-from vtkmodules.vtkCommonMisc import vtkErrorCode
-from vtkmodules.vtkImagingCore import vtkImageChangeInformation
-
-try:
-    from vtkITK import (
-        vtkITKArchetypeImageSeriesScalarReader,
-        vtkITKArchetypeImageSeriesVectorReaderFile,
-        vtkITKArchetypeImageSeriesVectorReaderSeries,
-    )
-except ImportError:
-    from vtkmodules.vtkITK import (
-        vtkITKArchetypeImageSeriesScalarReader,
-        vtkITKArchetypeImageSeriesVectorReaderFile,
-        vtkITKArchetypeImageSeriesVectorReaderSeries,
-    )
 
 
 class _DCMTag:
@@ -59,10 +45,6 @@ class _DCMTag:
 
 
 class VolumesReader:
-    """
-    Adapted from Modules/Scripted/DICOMPlugins/DICOMScalarVolumePlugin.py
-    """
-
     _dcm_io_backend = Literal["GDCM", "DCMTK"]
     dcm_read_lru_cache_size = 5000
 
@@ -80,9 +62,26 @@ class VolumesReader:
             return []
 
         if cls.contains_dcm_volume(volume_files):
-            volume_nodes = cls.load_dcm_volumes(scene, volume_files)
+            volume_nodes = cls.load_dcm_volumes(scene, app_logic, volume_files)
         else:
-            volume_nodes = [cls.load_single_file_volume(scene, app_logic, volume_file) for volume_file in volume_files]
+            volume_nodes = []
+            for volume_file in volume_files:
+                try:
+                    node = cls.load_single_file_volume(scene, app_logic, volume_file)
+                    if node:
+                        volume_nodes.append(node)
+                except Exception as e:
+                    logging.warning(f"Falha ao ler arquivo não-DICOM {volume_file}: {e}")
+
+        if not volume_nodes and len(volume_files) == 1:
+            try:
+                success, node = slicer.util.loadVolume(volume_files[0], returnNode=True)
+                if success and node:
+                    if node.GetScene() != scene:
+                        scene.AddNode(node)
+                    volume_nodes.append(node)
+            except Exception:
+                pass
 
         return cls._filter_none(volume_nodes)
 
@@ -116,30 +115,38 @@ class VolumesReader:
             return False
 
     @classmethod
-    def _is_grayscale(cls, volume_files: list[str]) -> bool:
-        if not volume_files:
-            return False
-        return "MONOCHROME" in cls._dcm_read_tag(volume_files[0], _DCMTag.photometricInterpretation)
-
-    @classmethod
     def _file_name_from_volume_path(cls, volume_files: str) -> tuple[str, str]:
         return volume_files, Path(volume_files).name
 
     @classmethod
-    def load_dcm_volumes(cls, scene: vtkMRMLScene, volume_files: list[vtkMRMLVolumeNode | None]):
-        return [cls.load_single_dcm_volume(scene, volume_files) for volume_files in cls.split_volumes(volume_files)]
+    def load_dcm_volumes(cls, scene: vtkMRMLScene, app_logic: vtkMRMLApplicationLogic, volume_files: list[str]):
+        loaded_nodes = []
+        for split_files in cls.split_volumes(volume_files):
+            try:
+                node = cls.load_single_dcm_volume(scene, app_logic, split_files)
+                if node:
+                    loaded_nodes.append(node)
+            except Exception:
+                continue
+        return loaded_nodes
+
+    @classmethod
+    def _is_multiframe(cls, file: str) -> bool:
+        frames_str = cls._dcm_read_tag(file, _DCMTag.numberOfFrames)
+        try:
+            return frames_str and int(frames_str) > 1
+        except Exception:
+            return False
 
     @classmethod
     def split_volumes(cls, volume_files: list[str]) -> list[list[str]]:
         if len(volume_files) < 1:
             return []
 
-        # Remove unsupported files
         volume_files = cls._filter_files_without_pixel_values(
             cls._filter_unreadable_dcm_files(cls._filter_dcm_files(volume_files))
         )
 
-        # make sub series volumes based on tag differences
         sub_series_tags = [
             _DCMTag.seriesInstanceUID,
             _DCMTag.acquisitionNumber,
@@ -148,26 +155,33 @@ class VolumesReader:
             _DCMTag.diffusionGradientOrientation,
         ]
 
-        # Iterate over tags and find every tag values listed in tags and store files associated with tag / value pairs
         sub_series_files = defaultdict(list)
         sub_series_values = defaultdict(list)
+        multiframe_files = []
+        single_frame_files = []
 
         for file in volume_files:
-            for tag in sub_series_tags:
-                value = cls._dcm_read_tag(file, tag)
-                value = cls._closest_value(tag, value, sub_series_values)
-                sub_series_files[tag, value].append(file)
+            if cls._is_multiframe(file):
+                multiframe_files.append([file])
+            else:
+                single_frame_files.append(file)
+                for tag in sub_series_tags:
+                    value = cls._dcm_read_tag(file, tag)
+                    value = cls._closest_value(tag, value, sub_series_values)
+                    sub_series_files[tag, value].append(file)
 
-        # For each value for which there is more than one value per tag list files
         split_files = set()
         for tag, values in sub_series_values.items():
             if len(values) <= 1:
                 continue
-
             for value in values:
                 split_files.add(tuple(sorted(sub_series_files[tag, value])))
 
-        return [list(files) for files in split_files] or [volume_files]
+        result = [list(files) for files in split_files]
+        if not result and single_frame_files:
+            return [single_frame_files] + multiframe_files
+            
+        return result + multiframe_files
 
     @classmethod
     def _closest_value(
@@ -230,33 +244,58 @@ class VolumesReader:
 
     @classmethod
     def _has_pixel_data(cls, volume_file: str) -> bool:
-        dcm = dcmread(volume_file)
-        return bool(dcm.get(_DCMTag.pixelData))
+        try:
+            dcm = dcmread(volume_file)
+            return bool(dcm.get(_DCMTag.pixelData))
+        except Exception:
+            return False
 
     @classmethod
     def _filter_none(cls, volume_nodes: list[vtkMRMLVolumeNode | None]) -> list[vtkMRMLVolumeNode]:
         return list(filter(None, volume_nodes))
 
     @classmethod
-    def load_single_dcm_volume(cls, scene: vtkMRMLScene, volume_files: list[str]) -> vtkMRMLVolumeNode | None:
-        # Get name and grayscale values
-        is_gray_scale = cls._is_grayscale(volume_files)
-        name = cls._dcm_series_name(volume_files)
+    def load_single_dcm_volume(
+        cls, 
+        scene: vtkMRMLScene, 
+        app_logic: vtkMRMLApplicationLogic, 
+        volume_files: list[str]
+    ) -> vtkMRMLVolumeNode | None:
+        if not volume_files:
+            return None
 
-        # Sort files by position
+        name = cls._dcm_series_name(volume_files)
         volume_files = cls._get_sorted_image_files(volume_files)
 
-        for backend in get_args(VolumesReader._dcm_io_backend):
-            volume = cls._load_dcm_volume_with_backend(scene, volume_files, name, backend, is_gray_scale)
-            if volume is not None:
-                return volume
+        file_list = vtkStringArray()
+        for f in volume_files:
+            file_list.InsertNextValue(f)
+
+        logic = vtkSlicerVolumesLogic()
+        logic.SetMRMLApplicationLogic(app_logic)
+        logic.SetMRMLScene(scene)
+
+        node = logic.AddArchetypeVolume(volume_files[0], name, 0, file_list)
+        
+        if node:
+            node.SetName(scene.GenerateUniqueName(name))
+            return node
+
+        for f in volume_files:
+            try:
+                success, fallback_node = slicer.util.loadVolume(f, returnNode=True)
+                if success and fallback_node:
+                    if fallback_node.GetScene() != scene:
+                        scene.AddNode(fallback_node)
+                    fallback_node.SetName(scene.GenerateUniqueName(name))
+                    return fallback_node
+            except Exception:
+                continue
+
         return None
 
     @classmethod
     def _dcm_series_name(cls, volume_files: list[str]) -> str:
-        """Generate a name suitable for use as a mrml node name based
-        on the series level data in the database
-        """
         if len(volume_files) < 1:
             return ""
         first_file = volume_files[0]
@@ -264,66 +303,6 @@ class VolumesReader:
         series_number = cls._dcm_read_tag(first_file, _DCMTag.seriesNumber)
         name = series_description or "Unnamed Series"
         return f"{series_number}: {name}" if series_number else name
-
-    @classmethod
-    def _load_dcm_volume_with_backend(
-        cls,
-        scene: vtkMRMLScene,
-        volume_files: list[str],
-        name: str,
-        image_io_backend: VolumesReader._dcm_io_backend,
-        grayscale=True,
-    ):
-        if grayscale:
-            reader = vtkITKArchetypeImageSeriesScalarReader()
-        else:
-            reader = (
-                vtkITKArchetypeImageSeriesVectorReaderSeries()
-                if len(volume_files) > 1
-                else vtkITKArchetypeImageSeriesVectorReaderFile()
-            )
-
-        reader.SetArchetype(volume_files[0])
-        for f in volume_files:
-            reader.AddFileName(f)
-        reader.SetSingleFile(0)
-        reader.SetOutputScalarTypeToNative()
-        reader.SetDesiredCoordinateOrientationToNative()
-        reader.SetUseNativeOriginOn()
-        if image_io_backend == "GDCM":
-            reader.SetDICOMImageIOApproachToGDCM()
-        elif image_io_backend == "DCMTK":
-            reader.SetDICOMImageIOApproachToDCMTK()
-        else:
-            _error_msg = f"Invalid imageIOName of {image_io_backend}"
-            raise Exception(_error_msg)
-        reader.Update()
-
-        if reader.GetErrorCode() != vtkErrorCode.NoError:
-            error_strings = (
-                image_io_backend,
-                vtkErrorCode.GetStringFromErrorCode(reader.GetErrorCode()),
-            )
-            _error_msg = f"Could not read scalar volume using %s approach.  Error is: {error_strings}"
-            raise RuntimeError(_error_msg)
-
-        image_change_information = vtkImageChangeInformation()
-        image_change_information.SetInputConnection(reader.GetOutputPort())
-        image_change_information.SetOutputSpacing(1, 1, 1)
-        image_change_information.SetOutputOrigin(0, 0, 0)
-        image_change_information.Update()
-
-        name = scene.GenerateUniqueName(name)
-        node_type = "vtkMRMLScalarVolumeNode" if grayscale else "vtkMRMLVectorVolumeNode"
-        volume_node = scene.AddNewNodeByClass(node_type, name)
-        volume_node.SetAndObserveImageData(image_change_information.GetOutputDataObject(0))
-        vtkMRMLVolumeArchetypeStorageNode.SetMetaDataDictionaryFromReader(
-            volume_node,
-            reader,
-        )
-        volume_node.SetRASToIJKMatrix(reader.GetRasToIjkMatrix())
-        volume_node.CreateDefaultDisplayNodes()
-        return volume_node
 
     @classmethod
     def _clean_name(cls, value: str) -> str:
@@ -342,12 +321,18 @@ class VolumesReader:
     @classmethod
     @lru_cache(dcm_read_lru_cache_size)
     def _dcm_read_file(cls, dcm_file):
-        return dcmread(dcm_file, stop_before_pixels=True)
+        try:
+            return dcmread(dcm_file, stop_before_pixels=True)
+        except Exception:
+            return None
 
     @classmethod
     @lru_cache(dcm_read_lru_cache_size)
     def _dcm_read_tag(cls, dcm_file: str, tag) -> str:
-        val = cls._dcm_read_file(dcm_file).get(tag)
+        file_obj = cls._dcm_read_file(dcm_file)
+        if not file_obj:
+            return ""
+        val = file_obj.get(tag)
         if val is None:
             return ""
 
@@ -358,33 +343,20 @@ class VolumesReader:
 
     @classmethod
     def _get_sorted_image_files(cls, volume_files: list[str]) -> list[str]:
-        """
-        Adapted from : Modules/Scripted/DICOMLib/DICOMUtils.py::DICOMUtils.py
-
-        Sort DICOM image files in increasing slice order (IS direction) corresponding to a series
-
-        Use the first file to get the ImageOrientationPatient for the
-        series and calculate the scan direction (assumed to be perpendicular
-        to the acquisition plane)
-        """
-
         if not volume_files:
             return []
 
-        # Make sure first file contains valid geometry
         ref_orientation = cls._dcm_read_tag(volume_files[0], _DCMTag.orientation)
         ref_position = cls._dcm_read_tag(volume_files[0], _DCMTag.position)
         if not all([ref_orientation, ref_position]):
             return volume_files
 
-        # Determine out-of-plane direction for first slice
         slice_axes = [float(zz) for zz in ref_orientation.split("\\")]
         ref_x = np.array(slice_axes[:3])
         ref_y = np.array(slice_axes[3:])
         scan_axis = np.cross(ref_x, ref_y)
         scan_origin = np.array([float(zz) for zz in ref_position.split("\\")])
 
-        # For each file in series, calculate the distance along the scan axis, sort files by this
         sort_list = []
         for file in volume_files:
             position_str = cls._dcm_read_tag(file, _DCMTag.position)

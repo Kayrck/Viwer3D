@@ -1,3 +1,5 @@
+import slicer
+import slicer.util
 from slicer import vtkMRMLVolumeNode
 from trame_server import Server
 from undo_stack import UndoStack
@@ -64,11 +66,68 @@ class SegmentEditorLogic(BaseSegmentationLogic[SegmentEditorState]):
         ui.effect_button_clicked.connect(self._on_effect_button_clicked)
         ui.undo_clicked.connect(self._on_undo_clicked)
         ui.redo_clicked.connect(self._on_redo_clicked)
+        ui.source_volume_changed.connect(self._on_source_volume_changed)
 
         for logic in self._effect_logic:
             logic.set_ui(ui)
 
         self._edit_segment_logic.set_ui(ui.edit_ui)
+
+    def update_available_volumes(self):
+        try:
+            volumes = self.scene.GetNodesByClass("vtkMRMLScalarVolumeNode")
+            volume_list = []
+            
+            phases = getattr(self.server.state, "dicom_series_phases", {})
+            
+            for i in range(volumes.GetNumberOfItems()):
+                node = volumes.GetItemAsObject(i)
+                series_uid = node.GetAttribute("DICOM.SeriesInstanceUID")
+                
+                phase_data = phases.get(series_uid, {}) if isinstance(phases, dict) else {}
+                phase_info = phase_data.get("phase", "")
+                
+                display_name = node.GetName()
+                if phase_info and phase_info != "unknown":
+                    display_name = f"{display_name} ({phase_info})"
+                    
+                volume_list.append({
+                    "title": display_name,
+                    "value": node.GetID()
+                })
+            
+            self.data.available_volumes = volume_list
+            
+            if volume_list:
+                current_id = self.data.source_volume_id
+                valid_ids = [v["value"] for v in volume_list]
+                if not current_id or current_id not in valid_ids:
+                    self._on_source_volume_changed(volume_list[0]["value"])
+                    
+        except Exception as e:
+            pass
+
+    def _on_source_volume_changed(self, volume_node_id):
+        if not volume_node_id:
+            return
+
+        try:
+            self.data.source_volume_id = volume_node_id
+            volume_node = self.scene.GetNodeByID(volume_node_id)
+            
+            if volume_node:
+                slicer.util.setSliceViewerLayers(background=volume_node)
+                slicer.util.resetSliceViews()
+
+                segmentation_nodes = list(self.scene.GetNodesByClass("vtkMRMLSegmentationNode"))
+                if segmentation_nodes:
+                    segmentation_node = segmentation_nodes[0]
+                    segmentation_node.SetReferenceImageGeometryParameterFromVolumeNode(volume_node)
+                    self.segmentation_editor.set_active_segmentation(segmentation_node, volume_node)
+            
+            self.server.state.flush()
+        except Exception as e:
+            pass
 
     def _on_toggle_segment_visibility_clicked(self, segment_id: str):
         self.segmentation_editor.set_segment_visibility(
@@ -148,15 +207,19 @@ class SegmentEditorLogic(BaseSegmentationLogic[SegmentEditorState]):
         self.segmentation_editor.set_surface_representation_enabled(display_state.show_3d)
 
     def on_volume_changed(self, volume_node: vtkMRMLVolumeNode) -> None:
-        segmentation_nodes = list(self.scene.GetNodesByClass("vtkMRMLSegmentationNode"))
-        if segmentation_nodes:
-            segmentation_node = segmentation_nodes[0]
-        else:
-            segmentation_node = self.segmentation_editor.create_empty_segmentation_node()
+        try:
+            segmentation_nodes = list(self.scene.GetNodesByClass("vtkMRMLSegmentationNode"))
+            if segmentation_nodes:
+                segmentation_node = segmentation_nodes[0]
+            else:
+                segmentation_node = self.segmentation_editor.create_empty_segmentation_node()
 
-        self.segmentation_editor.deactivate_effect()
-        self.segmentation_editor.set_active_segmentation(
-            segmentation_node,
-            volume_node,
-        )
-        self._on_segment_display_changed(self.data.segment_display)
+            self.segmentation_editor.deactivate_effect()
+            self.segmentation_editor.set_active_segmentation(
+                segmentation_node,
+                volume_node,
+            )
+            self._on_segment_display_changed(self.data.segment_display)
+            self.update_available_volumes()
+        except Exception as e:
+            pass

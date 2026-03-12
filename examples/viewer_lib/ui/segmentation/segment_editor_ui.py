@@ -10,6 +10,9 @@ from trame.widgets.vuetify3 import (
     VDivider,
     VSpacer,
     VTooltip,
+    VSelect,
+    VRow,
+    VCol,
 )
 from trame_client.widgets.core import Template
 from trame_server.utils.typed_state import TypedState
@@ -43,6 +46,8 @@ class SegmentEditorState:
     can_undo: bool = False
     can_redo: bool = False
     active_effect_name: str = ""
+    source_volume_id: str = ""
+    available_volumes: list = field(default_factory=list)
 
 
 class SegmentEditorUI(FlexContainer):
@@ -52,6 +57,7 @@ class SegmentEditorUI(FlexContainer):
     select_segment_clicked = Signal(str)
     add_segment_clicked = Signal()
     effect_button_clicked = Signal(type[SegmentationEffect])
+    source_volume_changed = Signal(str)
 
     undo_clicked = Signal()
     redo_clicked = Signal()
@@ -79,6 +85,8 @@ class SegmentEditorUI(FlexContainer):
             )
 
             with FlexContainer(v_if=(self._typed_state.name.segment_list.active_segment_id,), fill_height=True):
+                self._create_source_volume_widget()
+                
                 with VCard(variant="flat", height="50%"):
                     with VCardText(style="height: calc(100% - 64px); overflow-y: auto;"):
                         self._create_segment_list()
@@ -111,6 +119,21 @@ class SegmentEditorUI(FlexContainer):
                 SegmentDisplayUI(
                     typed_state=self.sub_state(self._typed_state.name.segment_display),
                     variant="flat",
+                )
+
+    def _create_source_volume_widget(self):
+        with VRow(classes="pa-4 pt-2", dense=True):
+            with VCol(cols="12"):
+                VSelect(
+                    label="Source Volume",
+                    v_model=(self._typed_state.name.source_volume_id, ""),
+                    items=(self._typed_state.name.available_volumes, []),
+                    item_title="title",
+                    item_value="value",
+                    density="compact",
+                    variant="outlined",
+                    hide_details=True,
+                    change=(self.source_volume_changed, "[$event]")
                 )
 
     def build_effect_buttons(self, all: bool = True, **kwargs):

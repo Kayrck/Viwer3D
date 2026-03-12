@@ -10,6 +10,7 @@ from undo_stack import Signal
 
 from trame_slicer.core import SlicerApp
 from trame_slicer.utils import write_client_files_to_dir
+from trame_slicer.utils.dicom_phase_detector import detect_dicom_phases
 
 from ..ui import (
     LoadVolumeState,
@@ -113,9 +114,29 @@ class LoadVolumeLogic(BaseLogic[LoadVolumeState]):
         self.server.state.flush()
         await asyncio.sleep(0.1)
         
-        volumes = self._slicer_app.io_manager.load_volumes(loaded_files)
-        if not volumes:
+        try:
+            if len(loaded_files) == 1:
+                success, node = slicer.util.loadVolume(loaded_files[0], returnNode=True)
+                volumes = [node] if success else []
+            else:
+                volumes = self._slicer_app.io_manager.load_volumes(loaded_files)
+                
+            if not volumes or volumes[0] is None:
+                self.server.state.loading_status = "Nenhum volume médico encontrado."
+                return
+        except Exception as e:
+            print(f"Erro do Slicer ao ler volume: {e}")
+            self.server.state.loading_status = "Erro: Formato não suportado ou corrompido."
+            self.server.state.loading_progress = 100
+            self.server.state.loading_fade_out = True
+            self.server.state.flush()
             return
+            
+        try:
+            fases_detectadas = detect_dicom_phases(loaded_files)
+            self.server.state.dicom_series_phases = fases_detectadas
+        except Exception as e:
+            print(f"Erro ao detectar fases DICOM: {e}")
             
         self.server.state.loading_status = "Preparando renderização..."
         self.server.state.loading_progress = 90
